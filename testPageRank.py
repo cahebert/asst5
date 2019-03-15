@@ -23,8 +23,8 @@ iters = int(sys.argv[2])
 # parse the dinstinct "source destination" strings into (i, [j]) where [j] is the list of all the nodes i points to
 linkTuples = lines.distinct()\
                   .map(lambda x: (int(x.split()[0]), int(x.split()[1])))\
-                  .groupByKey()\
-                  .persist()
+                  .groupByKey()
+#                  .persist()
 
 n = linkTuples.count()
 #initialize rank vector
@@ -48,16 +48,19 @@ for iteration in range(iters):
 
 r_bottom = np.array(ranks.takeOrdered(5, key = lambda x: x[1]))
 r_top = np.array(ranks.takeOrdered(5, key = lambda x: -x[1]))
+
 print('top five')
 print(r_top)
 
-#print(r[idx_sort[n-6:],0])
-#print(r[idx_sort[n-6:],1][::-1])
-
 print('bottom five')
 print(r_bottom)
+
+####
 #print(r[idx_sort[:5],0])
 #print(r[idx_sort[:5],1])
+
+#print(r[idx_sort[n-6:],0])
+#print(r[idx_sort[n-6:],1][::-1])
 
 ### STUDENT PAGE RANK CODE END   ###
 last = time.time()
