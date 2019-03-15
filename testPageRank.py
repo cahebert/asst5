@@ -6,7 +6,7 @@ import time
 # Create spark context
 conf = SparkConf()
 sc = SparkContext(conf=conf)
-
+sc.setLogLevel("ERROR")
 # This loads the input file as an RDD, with each element being a string
 # of the form "source destination" where source and destination
 # are node id's representing the directed edge from node source
@@ -23,7 +23,8 @@ iters = int(sys.argv[2])
 # parse the dinstinct "source destination" strings into (i, [j]) where [j] is the list of all the nodes i points to
 linkTuples = lines.distinct()\
                   .map(lambda x: (int(x.split()[0]), int(x.split()[1])))\
-                  .groupByKey()
+                  .groupByKey()\
+                  .persist()
 
 n = linkTuples.count()
 #initialize rank vector
@@ -35,18 +36,28 @@ def mapping(jList, r):
         # jList is all the nodes that i points to (i.e. deg(i))
         yield (j, r / nNeighbors) 
 
+
 for iteration in range(iters):
     # after join you have (i, (jList, r(i)))
-    contribution = linkTuples.join(ranks)\
-                                .flatMap(lambda i_jList_r: mapping(i_jList_r[1][0], i_jList_r[1][1]))
+    contribution = linkTuples.join(ranks)
+    contribution2 = contribution.flatMap(lambda i_jList_r: mapping(i_jList_r[1][0], i_jList_r[1][1]))
 
-    ranks = contribution.reduceByKey(lambda r1, r2: r1 + r2)\
-                        .mapValues(lambda sumR: sumR * beta + (1 - beta) / float(n))
+    ranks = contribution2.reduceByKey(lambda r1, r2: r1 + r2)\
+                         .mapValues(lambda sumR: sumR * beta + (1 - beta) / float(n))
 
-r = np.array(ranks.map(lambda (i, j): (j, i)).collect())
-r.sort(axis=0)
-print(r)
 
+r_bottom = np.array(ranks.takeOrdered(5, key = lambda x: x[1]))
+r_top = np.array(ranks.takeOrdered(5, key = lambda x: -x[1]))
+print('top five')
+print(r_top)
+
+#print(r[idx_sort[n-6:],0])
+#print(r[idx_sort[n-6:],1][::-1])
+
+print('bottom five')
+print(r_bottom)
+#print(r[idx_sort[:5],0])
+#print(r[idx_sort[:5],1])
 
 ### STUDENT PAGE RANK CODE END   ###
 last = time.time()
